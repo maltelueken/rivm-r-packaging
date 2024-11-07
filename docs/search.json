@@ -1,0 +1,44 @@
+[
+  {
+    "objectID": "241111_rivm_r_packaging.html#why-r-packaging",
+    "href": "241111_rivm_r_packaging.html#why-r-packaging",
+    "title": "Developing R Packages:How and Why",
+    "section": "Why R packaging",
+    "text": "Why R packaging\n\nImagine taking over a project with 10000 lines of dense code in a single file with no documentation or examples on how to run it.\n\n\nReusability:\n\nR users know how to use a package\nR developers know how to develop a package\n\n\n\n\n\nEfficiency:\n\nFollowing an established structure saves time\nCode and documentation only live in one place (DRY principle)\n\n\n\n\n\nReproducibility:\n\nEnsures that code runs outside of your environment (“But it works on my machine!!!”)\n\n\n\n\n\\(\\rightarrow\\) Software sustainability\n\n\n\\(\\rightarrow\\) Trade-off between costs and benefits"
+  },
+  {
+    "objectID": "241111_rivm_r_packaging.html#example-turning-a-script-into-a-package",
+    "href": "241111_rivm_r_packaging.html#example-turning-a-script-into-a-package",
+    "title": "Developing R Packages:How and Why",
+    "section": "Example: Turning a script into a package",
+    "text": "Example: Turning a script into a package\nEstimating income from age and sex with linear regression:\n\n\n\nmy_script.R\n\nN = 100\n\nage &lt;- sample(18:99, N, replace = TRUE)\nsex &lt;- sample(0:1, N, replace = TRUE)\nincome &lt;- 2 + 0.1 * age + 0.2 * sex + rnorm(N)\n\ndf &lt;- data.frame(age, sex, income)\n\nmodel &lt;- lm(income ~ age + sex, data = df)\n\nsummary(model)"
+  },
+  {
+    "objectID": "241111_rivm_r_packaging.html#the-r-packaging-workflow",
+    "href": "241111_rivm_r_packaging.html#the-r-packaging-workflow",
+    "title": "Developing R Packages:How and Why",
+    "section": "The R packaging workflow",
+    "text": "The R packaging workflow"
+  },
+  {
+    "objectID": "241111_rivm_r_packaging.html#version-control-and-continuous-integration",
+    "href": "241111_rivm_r_packaging.html#version-control-and-continuous-integration",
+    "title": "Developing R Packages:How and Why",
+    "section": "Version control and continuous integration",
+    "text": "Version control and continuous integration\n\n\n\nVersion control: Save a snapshot of your package at a certain point in time\nContinuous integration: Connect your version control system to a server (e.g., GitHub/GitLab) that automatically runs tests and builds documentation\n\n\n\nSetup version control with usethis::use_git() and connect to GitHub/GitLab with usethis::use_github() or usethis::use_gitlab_ci()\n\n\nAdd automated testing on GitHub with usethis::use_github_action(\"testthat\")"
+  },
+  {
+    "objectID": "241111_rivm_r_packaging.html#further-references",
+    "href": "241111_rivm_r_packaging.html#further-references",
+    "title": "Developing R Packages:How and Why",
+    "section": "Further references",
+    "text": "Further references\n\nCourse material on R packaging:Rodriguez-Sanchez, P., Vreede, B., & de Boer, L. (n.d.). R packaging. Carpentries Incubator. https://carpentries-incubator.github.io/lesson-R-packaging/\nReproducible software development:The Turing Way Community. (2022). The Turing Way: A handbook for reproducible, ethical and collaborative research (Version 1.0.2). Zenodo. https://doi.org/10.5281/ZENODO.3233853\nR packaging guide:Wickham, H. (2021). Mastering Shiny: Build interactive apps, reports, and dashboards powered by R (1st edition). O’Reilly Media. https://mastering-shiny.org/\nR Shiny guide:Wickham, H., & Bryan, J. (2023). R packages: Organize, test, document, and share your code (2nd edition). O’Reilly Media. https://r-pkgs.org/"
+  },
+  {
+    "objectID": "241111_rivm_r_packaging.html#questions-and-discussion",
+    "href": "241111_rivm_r_packaging.html#questions-and-discussion",
+    "title": "Developing R Packages:How and Why",
+    "section": "Questions and discussion",
+    "text": "Questions and discussion"
+  }
+]

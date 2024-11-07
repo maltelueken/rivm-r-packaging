@@ -1,0 +1,7 @@
+project:
+  title: "rivm-r-packaging"
+  type: website
+  output-dir: docs
+
+editor: visual
+

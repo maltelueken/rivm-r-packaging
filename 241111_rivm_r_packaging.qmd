@@ -1,0 +1,1024 @@
+---
+title: "<br><br>Developing R Packages:<br>How and Why"
+date: "11-11-2024"
+author:
+  name: "Malte Lüken"
+  affiliation: "Netherlands eScience Center"
+format:
+  revealjs:
+    theme: [default, escience.scss]
+    # logo: escience_logo_large.png
+    # footer: "Developing R Packages: How and Why"
+    toc: true
+    slide-level: 4
+    incremental: false  
+    smaller: true
+    scrollable: false
+    slide-number: c/t  # current/total
+    # background-image: escience_background_white.png
+    execute:
+      echo: true
+      eval: true
+      warning: false
+    title-slide-attributes:
+      # data-logo: ""
+      # data-footer: ""
+      data-background-image: escience_background_title.png
+      data-background-size: contain
+---
+
+```{r setup, eval=TRUE, echo=FALSE}
+library(testthat)
+```
+
+## Why R packaging
+
+::: {.r-fit-text}
+
+*Imagine taking over a project with 10000 lines of dense code in a single file with no documentation or examples on how to run it.*
+
+::: {.fragment .fade-in data-fragment-index="0"}
+-   **Reusability**:
+
+    -   R users know how to use a package
+    -   R developers know how to develop a package
+:::
+
+::: {.fragment .fade-in data-fragment-index="1"}
+-   **Efficiency**:
+
+    -   Following an established structure saves time
+    -   Code and documentation only live in one place ([DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) principle)
+:::
+
+::: {.fragment .fade-in data-fragment-index="2"}
+-   **Reproducibility**:
+
+    -   Ensures that code runs outside of your environment (*"But it works on my machine!!!"*)
+:::
+
+::: {.fragment .fade-in data-fragment-index="3"}
+$\rightarrow$ **Software sustainability**
+:::
+
+::: {.fragment .fade-in}
+
+$\rightarrow$ Trade-off between costs and benefits
+
+:::
+:::
+
+## Example: Turning a script into a package
+
+Estimating income from age and sex with linear regression:
+
+```{r, eval=FALSE, filename="my_script.R"}
+
+N = 100
+
+age <- sample(18:99, N, replace = TRUE)
+sex <- sample(0:1, N, replace = TRUE)
+income <- 2 + 0.1 * age + 0.2 * sex + rnorm(N)
+
+df <- data.frame(age, sex, income)
+
+model <- lm(income ~ age + sex, data = df)
+
+summary(model)
+
+```
+
+## The R packaging workflow
+
+### Setup
+
+::: r-fit-text
+Two ways to easily create an R package:
+
+::: {.incremental}
+
+1.  **RStudio**: File $\rightarrow$ New Project $\rightarrow$ New Directory $\rightarrow$ R Package (with name `testR`)
+
+2.  **usethis** package: `usethis::create_package("testR")`
+
+:::
+::: {.fragment .fade-in}
+::: box
+**Best practice**: The `usethis` package contains useful functions to automate package development
+:::
+:::
+:::
+
+::: aside
+[Chapter 4: Fundamental development workflows](https://r-pkgs.org/workflow101.html) in R Packages
+:::
+
+### Package structure
+
+Creates new folder with minimal R package skeleton:
+
+::: {.incremental}
+
+-   `DESCRIPTION`: Metadata (e.g, package name, version, author, dependencies)
+-   `NAMESPACE`: Which functions to export and which other packages to import
+-   `R/`: R functions (with `hello.R` example file)
+-   `.Rbuildignore`: Files to ignore when building the package (e.g., old R scripts)
+
+:::
+::: {.fragment .fade-in}
+
+Build package by clicking on `Build` $\rightarrow$ `Install` or `devtools::install()`
+
+:::
+
+::: aside
+[Chapter 3: Package structure and state](https://r-pkgs.org/structure.html) in R Packages
+:::
+
+### Code
+
+#### Creating functions
+
+::: r-fit-text
+::: r-stack
+::: {.fragment .fade-out data-fragment-index="2"}
+Advantages of functions:
+
+-   Rerun code with different inputs
+-   Lead to modular code ([separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns))
+-   Easier to read and test code
+
+::: {.fragment .fade-in data-fragment-index="0"}
+Two ways to create a new function:
+
+1.  **Manual**: Create a new `create_model.R` file in the `R/` folder
+2.  **usethis**: `usethis::use_r("create_model")`. This will automatically create `R/create_model.R`
+:::
+
+::: {.fragment .fade-in data-fragment-index="1"}
+::: box
+**Best practice**: Give functions clear and consistent names (e.g., `create_model` instead of `model` or `create_mod`)
+:::
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="2"}
+Example:
+
+::: columns
+::: {.column width="50%"}
+```{r, filename="R/create_model.R"}
+# Ambiguous argument and variable names
+create_model <- function(df, dep, preds) {
+  f <- formula(
+    paste(dep, "~", paste(preds, collapse = " + "))
+  )
+  
+  m <- lm(f, data = df)
+  
+  return(m)
+}
+
+```
+:::
+
+::: {.column width="50%"}
+::: {.fragment .fade-in data-fragment-index="4"}
+```{r, filename="R/create_model.R"}
+# Clear argument and variable names
+create_model <- function(df, dependent, predictors) {
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  model <- lm(model_formula, data = df)
+  
+  return(model)
+}
+
+```
+:::
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="3"}
+::: box
+**Best practice**: Use clear and consistent argument names (e.g., `dependent` instead of `dep`; `df` is a common abbreviation)
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="5"}
+To test the function, run `devtools::load_all()` (or Ctrl+Shift+L) and then `create_model(df, "income", c("age", "sex"))`
+:::
+:::
+:::
+:::
+
+::: aside
+[Chapter 6: R code](https://r-pkgs.org/code.html) in R Packages
+:::
+
+#### Build-time vs. load-time
+
+::: {.r-fit-text}
+::: {.r-stack}
+::: {.fragment .fade-out data-fragment-index="4"}
+-   **Build-time**: Code in `R/` is executed when the binary package is built (e.g., `devtools::install()` or by CRAN) and results are saved
+-   **Load-time**: Saved results are loaded when the package is attached (e.g., `library(testR)`) 
+
+::: {.fragment .fade-in data-fragment-index="1"}
+Example:
+
+```{r}
+
+x <- Sys.time() # Is executed at build-time
+
+# Loads and returns x at load-time
+get_current_time <- function() {
+  return(x)
+}
+
+```
+:::
+
+::: {.fragment .fade-in data-fragment-index="2"}
+Important when defining aliases:
+
+```{r}
+
+# Uses version of stats::lm that is available at build-time
+lm_alias <- stats::lm 
+
+```
+:::
+
+::: {.fragment .fade-in data-fragment-index="3"}
+Or filepaths:
+
+```{r}
+
+# Uses filepath at build-time
+model_dir <- file.path("data", "models")
+
+```
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="4"}
+::: box
+**Best practice**: Don't use `library`, `require`, or `source` in a package
+:::
+
+::: {.fragment .fade-in data-fragment-index="5"}
+::: box
+**Best practice**: Don't use functions that change the global state in a package, e.g., `setwd`, `options`, `par`, instead use the `withr` package
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="6"}
+Example:
+
+::: columns
+::: {.column width="50%"}
+```{r}
+# Modifies the global state
+read_data <- function(base_dir) {
+  old_wd <- getwd()
+  setwd(base_dir)
+  df <- read.csv(file.path("data", "data.csv"))
+  setwd(old_wd)
+  
+  return(df)
+}
+
+```
+:::
+
+::: {.column width="50%"}
+::: {.fragment .fade-in data-fragment-index="7"}
+```{r}
+# Uses the withr package
+read_data <- function(base_dir) {
+  withr::with_dir(base_dir, {
+    df <- read.csv(file.path("data", "data.csv"))
+  })
+  
+  return(df)
+}
+
+```
+:::
+:::
+:::
+:::
+:::
+:::
+:::
+
+::: aside
+[Chapter 6: R code](https://r-pkgs.org/code.html) in R Packages
+:::
+
+#### Writing robust code
+
+::: {.incremental}
+
+-   Code should be robust to avoid *silent failures*
+-   Workflow for writing robust R functions:
+
+    1.  What are the assumptions of the function? (e.g., `df` is a data frame)
+    2.  Check if assumptions are met (*asserting*)
+    3.  Define what happens when assumptions are not met
+
+:::
+
+::: {.fragment .fade-in}
+
+Example:
+
+:::
+::: {.r-stack}
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "2-4"
+create_model <- function(df,
+                         # Hints at which type is expected
+                         dependent = character(),
+                         predictors = character()) {
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  model <- lm(model_formula, data = df)
+  
+  return(model)
+}
+```
+:::
+
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "4-9"
+create_model <- function(df,
+                         dependent = character(),
+                         predictors = character()) {
+  # Checks if arguments have expected type
+  stopifnot(
+    is.data.frame(df),
+    is.character(dependent),
+    is.character(predictors)
+  )
+  
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  model <- lm(model_formula, data = df)
+  
+  return(model)
+}
+```
+:::
+
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "10-13"
+create_model <- function(df,
+                         dependent = character(),
+                         predictors = character()) {
+  stopifnot(
+    is.data.frame(df),
+    is.character(dependent),
+    is.character(predictors)
+  )
+  
+  # Checks if another assumption is met and handles exception
+  if (nrow(df) == 0) {
+    stop("Data frame not valid")
+  }
+  
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  model <- lm(model_formula, data = df)
+  
+  return(model)
+}
+```
+:::
+
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "10-13"
+create_model <- function(df,
+                         dependent = character(),
+                         predictors = character()) {
+  stopifnot(
+    is.data.frame(df),
+    is.character(dependent),
+    is.character(predictors)
+  )
+  
+  # Returns an informative error message
+  if (nrow(df) == 0) {
+    stop("Data frame contains zero rows")
+  }
+  
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  model <- lm(model_formula, data = df)
+  
+  return(model)
+}
+```
+:::
+:::
+
+::: aside
+[Writing robust code](https://book.the-turing-way.org/reproducible-research/code-quality/code-quality-robust) in The Turing Way
+:::
+
+#### Informative error messages
+
+::: {.incremental}
+
+-   Clearly describe the problem
+-   Suggest a solution
+-   Are honest about what they know and don't know
+
+:::
+
+::: {.fragment .fade-in}
+
+Example:
+
+:::
+::: r-stack
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "18-26"
+create_model <- function(df,
+                         dependent = character(),
+                         predictors = character()) {
+  stopifnot(
+    is.data.frame(df),
+    is.character(dependent),
+    is.character(predictors)
+  )
+  
+  if (nrow(df) == 0) {
+    stop("Data frame contains zero rows")
+  }
+  
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  tryCatch(
+    {
+      model <- lm(model_formula, data = df)
+    },
+    error = function(error) {
+      # Does not know whether dependent variable is numeric
+      stop("Dependent variable must be numeric")
+    }
+  )
+  
+  return(model)
+}
+```
+:::
+
+::: {.fragment .fade-in}
+```{r, filename="R/create_model.R"}
+#| code-line-numbers: "18-26"
+create_model <- function(df,
+                         dependent = character(),
+                         predictors = character()) {
+  stopifnot(
+    is.data.frame(df),
+    is.character(dependent),
+    is.character(predictors)
+  )
+  
+  if (nrow(df) == 0) {
+    stop("Data frame contains zero rows")
+  }
+  
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  
+  tryCatch(
+    {
+      model <- lm(model_formula, data = df)
+    },
+    error = function(error) {
+      # Returns what it knows
+      stop(paste("Model could not be created:", error$message))
+    }
+  )
+  
+  return(model)
+}
+```
+:::
+:::
+
+::: aside
+[Writing robust code](https://book.the-turing-way.org/reproducible-research/code-quality/code-quality-robust) in The Turing Way
+:::
+
+#### Software development principles
+
+::: {.r-fit-text}
+::: {.incremental}
+
+-   Do not repeat yourself (**DRY**): Avoid duplicating code $\rightarrow$ Rule of three (if you use the same code three times, it should be a function)
+    -   Abstractions can avoid duplication
+
+::: {.fragment .fade-in}
+
+```{r, filename="R/create_model_formula.R"}
+
+create_model_formula <- function(predictors = character(),
+                                 dependent = character()) {
+  model_formula <- formula(
+    paste(dependent, "~", paste(predictors, collapse = " + "))
+  )
+  return(model_formula)
+}
+```
+
+:::
+
+-   Keep it simple, stupid (**KISS**): Avoid unnecessary complexity (also **YAGNI**: You ain't gonna need it)
+    -   Abstractions can create complexity and overhead
+
+
+-   Separation of concerns: Functions should have a single responsibility
+
+:::
+
+::: {.fragment .fade-in}
+::: box
+**Best practice**: Isolate side-effects (e.g. writing files, plotting) from core functions
+:::
+:::
+:::
+
+#### Organizing code
+
+::: {.r-fit-text}
+Two (bad) extremes:
+
+-   All functions in one file $\rightarrow$ Hard to find functions
+-   One function per file $\rightarrow$ Too many files
+
+::: {.fragment .fade-in data-fragment-index="0"}
+::: box
+**Best practice**: Large functions with lots of documentation should have their own files. Small functions can be grouped together in one file
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="1"}
+Function definitions can be found with `Code` $\rightarrow$ `Go to File/Function` (Ctrl+`.`) or by moving the cursor into the function name and pressing `F2`
+:::
+
+::: {.fragment .fade-in data-fragment-index="2"}
+::: box
+**Best practice**: The `styleR` package is useful for applying a consistent code style (e.g. tidyverse style)
+:::
+:::
+
+::: {.fragment .fade-in data-fragment-index="3"}
+::: box
+**Best practice**: The `formatR` package is useful for applying a consistent line breaks and indentation
+:::
+:::
+:::
+
+::: aside
+[Chapter 6: R code](https://r-pkgs.org/code.html) in R Packages
+
+See also the `tidyverse` style [guide](https://style.tidyverse.org/)
+:::
+
+### Testing
+
+#### Ad-hoc testing
+
+::: {.r-fit-text}
+
+*Most R users test their code implicitly.*
+
+Typical development workflow:
+
+::: {.incremental}
+
+1.  Write code
+2.  Run code in console or R script and see if it produces the expected results (e.g., via print statements)
+3.  Adjust code if necessary and repeat
+
+:::
+
+::: {.fragment .fade-in}
+
+Common problems with ad-hoc testing:
+
+::: {.incremental}
+
+-   Time-consuming
+-   Error-prone
+-   Not systematic (edge cases)
+-   Not reproducible
+
+:::
+:::
+:::
+
+
+::: aside
+[Chapter 13: Testing basics](https://r-pkgs.org/testing-basics.html) in R Packages
+
+[Code testing](https://book.the-turing-way.org/reproducible-research/testing) in The Turing Way
+:::
+
+#### Automated testing
+
+::: {.r-fit-text}
+<br>
+Advantages of automated testing with `testthat`:<br>
+
+::: {.incremental}
+
+- Fewer (undetected) bugs
+- Forces better code structure
+- Easy to apply changes to code
+- More trustworthiness in code
+
+:::
+
+::: {.fragment .fade-in}
+$\rightarrow$ Tests as documentation and starting point for new developers
+:::
+
+:::
+
+::: aside
+[Chapter 13: Testing basics](https://r-pkgs.org/testing-basics.html) in R Packages
+
+[Code testing](https://book.the-turing-way.org/reproducible-research/testing) in The Turing Way
+:::
+
+#### What to test
+
+::: {.r-fit-text}
+
+::: {.incremental}
+- External interface instead of internal interface
+- Each behavior has only one test
+- Fragile over robust code
+- Fixed bugs
+
+:::
+
+::: {.fragment .fade-in}
+
+Setup automated testing with `usethis::use_testthat()` $\rightarrow$ creates folder `tests/testthat/` for test files
+
+:::
+::: {.fragment .fade-in}
+
+Add a new test file with `usethis::use_test("create_model")` which creates `tests/testthat/test-create_model.R` with a dummy passing test
+
+:::
+:::
+
+::: aside
+[Chapter 13: Testing basics](https://r-pkgs.org/testing-basics.html) in R Packages
+
+[Code testing](https://book.the-turing-way.org/reproducible-research/testing) in The Turing Way
+:::
+
+#### Testing principles
+
+::: {.r-fit-text}
+
+::: {.incremental}
+
+-   Any tests are better than no tests
+-   Tests should not only be written but also be run
+-   Tests should be run proportionally to the time it takes to run them
+-   Test cases should be realistic
+-   Tests should be fully self-sufficient and self-contained
+
+:::
+
+::: columns
+::: {.column width="50%"}
+
+::: {.fragment .fade-in}
+```{r, eval=TRUE, filename="tests/testthat/test-create_model.R"}
+
+N = 100
+
+age <- sample(18:99, N, replace = TRUE)
+sex <- sample(0:1, N, replace = TRUE)
+income <- 2 + 0.1 * age + 0.2 * sex + rnorm(N)
+
+df <- data.frame(age, sex, income)
+
+test_that("create_model works", {
+  mod <- create_model(df, "income", c("age", "sex"))
+  
+  expect_is(mod, "lm")
+})
+```
+:::
+:::
+
+::: {.column width="50%"}
+::: {.fragment .fade-in}
+```{r, eval=TRUE, filename="tests/testthat/test-create_model.R"}
+test_that("create_model works", {
+  N = 100
+
+  age <- sample(18:99, N, replace = TRUE)
+  sex <- sample(0:1, N, replace = TRUE)
+  income <- 2 + 0.1 * age + 0.2 * sex + rnorm(N)
+  
+  df <- data.frame(age, sex, income)
+  
+  mod <- create_model(df, "income", c("age", "sex"))
+  
+  expect_is(mod, "lm")
+})
+```
+:::
+:::
+:::
+
+::: {.fragment .fade-in}
+::: box
+**Best practice**: Helper functions and the `withr` package can be used to create self-sufficient and self-contained tests
+:::
+:::
+:::
+
+::: aside
+[Chapter 14: Designing your test suite](https://r-pkgs.org/testing-design.html) in R Packages
+:::
+
+#### Testing layers
+
+::: {.r-fit-text}
+
+::: {.incremental}
+
+1.  **Unit tests**: Test individual functions
+2.  **Integration tests**: Test how functions work together
+3.  **System tests**: Test the entire system
+
+:::
+
+::: {.fragment .fade-in}
+$\rightarrow$ Only proceed to next layer if previous layer succeeds
+<br>
+<br>
+:::
+
+::: {.fragment .fade-in}
+**Regression tests**: Check whether the output of a function is still the same (e.g., tables, plots)
+<br>$\rightarrow$ Does not check if output is correct
+:::
+:::
+
+::: aside
+[Code testing](https://book.the-turing-way.org/reproducible-research/testing) in The Turing Way
+:::
+
+### Documentation
+
+#### Function documentation
+
+::: {.r-fit-text}
+
+R packages can be easily documented with `roxygen2`:
+
+::: {.incremental}
+
+-   Add documentation directly as code doc strings instead to a separate file
+-   Automatically converts doc strings to markdown $\rightarrow$ text-based and easy to version control
+-   Automatically updates exported functions and imported packages in `NAMESPACE`
+-   Easy to update documentation
+-   Document functions, datasets, and package itself
+
+:::
+::: {.fragment .fade-in}
+
+Setup documentation with `usethis::use_roxygen_md()`
+
+:::
+::: {.fragment .fade-in}
+
+Add documentation to `R/create_model.R` by clicking into the function definition and `Code` $\rightarrow$ `Insert Roxygen Skeleton`
+
+:::
+::: {.fragment .fade-in}
+
+To update documentation, run `devtools::document()` (or Ctrl+Shift+D)
+
+:::
+:::
+
+::: aside
+[Chapter 16: Function documentation](https://r-pkgs.org/man.html) in R Packages
+:::
+
+#### Function documentation example
+
+Example:
+
+```{r}
+
+#' Create a linear regression model
+#' 
+#' Creates a linear regression model from a data frame and dependent and independent variables.
+#'
+#' @param df A data frame containing the variables included in the model.
+#' @param dep A single character string with the name of the dependent variable.
+#' @param preds A character vector with the names of the independent variables.
+#'
+#' @return A linear regression model of class `"lm"`.
+#' 
+#' @details The function uses the \link{lm} function to estimate a linear regression model.
+#' 
+#' @export
+#'
+#' @examples
+#' N = 100
+#' 
+#' age <- sample(18:99, N, replace = TRUE)
+#' sex <- sample(0:1, N, replace = TRUE)
+#' income <- 2 + 0.1 * age + 0.2 * sex + rnorm(N)
+#' 
+#' df <- data.frame(age, sex, income)
+#' 
+#' mod <- create_model(df, "income", c("age", "sex"))
+#' 
+create_model <- function(df, dep, preds) {
+  f <- formula(paste(dep, "~", paste(preds, collapse = " + ")))
+  
+  m <- lm(f, data = df)
+  
+  return(m)
+}
+
+```
+
+#### Vignettes
+
+::: {.r-fit-text}
+
+Complex examples, background information (e.g., theories, model equations, simulation studies), and tutorials should not live in the function documentation but in **vignettes**.
+
+::: {.fragment .fade-in}
+
+Create a new vignette with `usethis::use_vignette("create_model")`
+
+:::
+::: {.fragment .fade-in}
+
+This creates a new `vignettes/` folder with a `create_model.Rmd` file.
+
+:::
+::: {.fragment .fade-in}
+
+Add content to `vignettes/create_model.Rmd`
+
+:::
+:::
+
+::: aside
+[Chapter 17: Vignettes](https://r-pkgs.org/vignettes.html) in R Packages
+:::
+
+#### README
+
+::: {.r-fit-text}
+
+Documentation for developers/users who see the package on GitHub/GitLab/CRAN
+
+::: {.fragment .fade-in}
+
+Answers three questions about a package:
+
+:::
+
+::: {.incremental}
+
+-   Why should I use it?
+-   How do I use it?
+-   How do I install it?
+
+:::
+
+::: {.fragment .fade-in}
+Create a new R markdown README file with `usethis::use_readme_md()` and add content to `README.Rmd`
+:::
+:::
+
+::: aside
+[Chapter 18.1: README](https://r-pkgs.org/other-markdown.html#sec-readme) in R Packages
+:::
+
+#### Website
+
+::: {.r-fit-text}
+
+Combine README, vignettes, and function documentation in a website with `pkgdown`
+
+::: {.fragment .fade-in}
+
+Setup website with `usethis::use_pkgdown()`
+
+:::
+::: {.fragment .fade-in}
+
+`pkgdown` automatically collects all function documentation, vignettes, and README files and creates a website in the `docs/` folder
+
+:::
+::: {.fragment .fade-in}
+
+Update website with `pkgdown::build_site()` or `usethis::build_site()`
+
+:::
+:::
+
+::: aside
+[Chapter 19: Website](https://r-pkgs.org/website.html) in R Packages
+:::
+
+### Workflow summary
+
+::: {.r-fit-text}
+
+1.  Edit files in `R/` and `vignettes/`
+2.  Update documentation with `devtools::document()`
+3.  Load package with `devtools::load_all()`
+4.  Run tests with `devtools::test()` or `devtools::test_active_file()`
+
+If tests pass:
+
+5.  Check package with `devtools::check()`
+
+:::
+
+::: aside
+[Chapter 6.6: Constant health checks](https://r-pkgs.org/structure.html) in R Packages
+:::
+
+## Version control and continuous integration
+
+::: {.r-fit-text}
+
+::: {.incremental}
+
+-   **Version control**: Save a snapshot of your package at a certain point in time
+-   **Continuous integration**: Connect your version control system to a server (e.g., GitHub/GitLab) that automatically runs tests and builds documentation
+
+:::
+
+::: {.fragment .fade-in}
+
+Setup version control with `usethis::use_git()` and connect to GitHub/GitLab with `usethis::use_github()` or `usethis::use_gitlab_ci()`
+
+:::
+::: {.fragment .fade-in}
+
+Add automated testing on GitHub with `usethis::use_github_action("testthat")`
+
+:::
+:::
+
+### GitLab example
+
+Running `usethis::use_gitlab_ci()` creates a `.gitlab-ci.yml` file in the root directory of the package:
+
+```{yaml, filename=".gitlab-ci.yml"}
+#| file: ".gitlab-ci.yml"
+```
+
+## Further references
+
+- **Course material on R packaging**:<br>Rodriguez-Sanchez, P., Vreede, B., & de Boer, L. (n.d.). R packaging. Carpentries Incubator. <https://carpentries-incubator.github.io/lesson-R-packaging/>
+- **Reproducible software development**:<br>The Turing Way Community. (2022). The Turing Way: A handbook for reproducible, ethical and collaborative research (Version 1.0.2). Zenodo. <https://doi.org/10.5281/ZENODO.3233853>
+- **R packaging guide**:<br>Wickham, H. (2021). Mastering Shiny: Build interactive apps, reports, and dashboards powered by R (1st edition). O’Reilly Media. <https://mastering-shiny.org/>
+- **R Shiny guide**:<br>Wickham, H., & Bryan, J. (2023). R packages: Organize, test, document, and share your code (2nd edition). O’Reilly Media. <https://r-pkgs.org/>
+
+
+## Questions and discussion
